@@ -1,0 +1,159 @@
+# $Id: Makefile.in 3031 2006-02-14 13:17:09Z ft $
+#
+
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+DESTDIR = @DESTDIR@
+SHELL = @SHELL@
+
+confdir = @sysconfdir@
+sslcertdir = @sslcertdir@
+mnesiadir = @mnesiadir@
+beamdir = @libdir@/yxa/ebin
+includedir = @libdir@/yxa/include
+sbindir = @sbindir@
+exec_prefix=${prefix}
+builddir = @builddir@
+local_module = @local_module@
+
+ERLC = @ERLC@
+ERL = @ERL@
+
+INSTALL = @INSTALL@
+install_DATA = @INSTALL_DATA@
+install_PROGRAM = @INSTALL_PROGRAM@
+
+ebin_dir = ../../ebin
+doc_dir = ../../doc
+
+mkinstalldirs = $(SHELL) $(top_srcdir)/scripts/mkinstalldirs
+
+systools_make_script = \
+	$(ERLC) +no_module_tests -pa $(ebin_dir) $(ebin_dir)/$*.rel
+
+erl_FILES = \
+	event_package.erl \
+	active_subscriber.erl \
+	active_subscription.erl \
+	callingname_package.erl \
+  callingname_subscriber.erl \
+	ybed.erl \
+	dialog_package.erl \
+	eventserver.erl \
+	eventserver_test.erl \
+	event_mnesia_monitor.erl \
+	notifylist.erl \
+	presence_package.erl \
+	presence_pidf.erl \
+	presence_xmerl_xml.erl \
+	subscription.erl
+
+
+imported_hrl_FILES = \
+	../include/event.hrl \
+	../include/yxa_config.hrl
+
+hrl_FILES = \
+
+yxa_hrl_FILES = $(imported_hrl_FILES) $(hrl_FILES)
+
+boot_FILES = \
+	eventserver.boot
+
+start_FILES = \
+	eventserver
+
+app_FILES = $(addprefix $(ebin_dir)/, $(boot_FILES:.boot=.app))
+
+rel_FILES = $(addprefix $(ebin_dir)/, $(boot_FILES:.boot=.rel))
+
+CC = gcc
+CFLAGS = -Wall
+
+beam_FILES = $(addprefix $(ebin_dir)/, $(erl_FILES:.erl=.beam))
+
+all: $(beam_FILES) $(app_FILES) $(rel_FILES) $(boot_FILES) $(start_FILES)
+
+install: $(beam_FILES) $(boot_FILES) $(hrl_FILES) $(start_FILES)
+	$(mkinstalldirs) $(DESTDIR)$(beamdir)
+	$(mkinstalldirs) $(DESTDIR)$(includedir)
+	$(mkinstalldirs) $(DESTDIR)$(sbindir)
+	for p in $(beam_FILES) $(app_FILES); do \
+	  $(install_DATA) $$p $(DESTDIR)$(beamdir)/$$f ; \
+	done
+	for p in $(boot_FILES); do \
+	  $(install_DATA) $$p $(DESTDIR)$(beamdir)/$$f ; \
+	done
+	for p in $(hrl_FILES); do \
+	  $(install_DATA) $(srcdir)/$$p $(DESTDIR)$(includedir)/$$f ; \
+	done
+	for p in $(start_FILES); do \
+	  $(install_PROGRAM) $$p $(DESTDIR)$(sbindir)/$$f ; \
+	done
+
+packages: $(boot_FILES) $(rel_FILES) sys.config
+	for p in $(basename $(rel_FILES)) ; do \
+	  $(ERL) -noinput -pa $(ebin_dir) \
+	    -run systools make_tar  $$p -s erlang halt ; \
+	  test -f $$p.tar.gz || exit 1 ; \
+	done
+
+distclean: clean
+	rm -f Makefile
+
+clean:
+	rm -f core *.core *~
+	rm -f *.beam *.script *.start
+	rm -f *.o ktrace.out erl_crash.dump
+	rm -f $(addsuffix .tar.gz, $(basename $(rel_FILES)))
+	rm -f $(start_FILES)
+	rm -f $(boot_FILES)
+	rm -f $(rel_FILES) sys.config
+	rm -f $(app_FILES)
+	rm -f $(beam_FILES)
+
+doc:
+	mkdir -p $(doc_dir)/html/src/event
+	cp $(srcdir)/overview.edoc $(doc_dir)/html/src/event/
+	$(ERL) $(YXA_EDOC_ARGS) -pa $(ebin_dir) -noshell \
+		-yxa_edoc_dir $(doc_dir)/html/src/event \
+		-yxa_edoc_srcpath $(srcdir) \
+		-run yxa_edoc run "$(erl_FILES)" \
+		-run init stop
+
+$(beam_FILES): $(yxa_hrl_FILES)
+$(boot_FILES): $(beam_FILES)
+
+SUFFIXES = .c .o .hrl .beam .erl .boot .rel .rel-in .app .app-in
+.SUFFIXES:
+.SUFFIXES: .c .o .hrl .beam .erl .boot .rel .rel-in .app .app-in
+
+$(ebin_dir)/%.beam:	$(srcdir)/%.erl
+	$(ERLC) -o $(ebin_dir) -pa $(ebin_dir) -I$(srcdir)/../include -pz ../ -W +debug_info $<
+
+$(ebin_dir)/%.rel:	$(srcdir)/%.rel-in
+	sed -e 's!%VERSION%!@PACKAGE_VERSION@!' < $< > $@
+
+$(ebin_dir)/%.app:	$(srcdir)/%.app-in
+	sed -e 's!%VERSION%!@PACKAGE_VERSION@!' < $< > $@
+
+%.boot: $(ebin_dir)/%.app $(ebin_dir)/yxa.app $(ebin_dir)/%.rel
+	$(systools_make_script)
+
+sys.config:	$(srcdir)/../sys.config-in
+	sed -e 's!%DB_DIR%!$(mnesiadir)!' \
+	      -e 's!%CONF_DIR%!$(confdir)!' < $< > $@
+
+$(start_FILES): $(top_srcdir)/scripts/init.sh.in ../../config.status
+
+eventserver:
+	sed -e "s!@PROGRAMNAME@!$@!" \
+	    -e 's!@CONFIGDIR@!$(confdir)!' \
+	    -e 's!@SSLCERTDIR@!$(sslcertdir)!' \
+	    -e 's!@MNESIADIR@!$(mnesiadir)!' \
+	    -e 's!@erl@!$(ERL)!' \
+	    -e 's!@beamdir@!$(beamdir)!' < $(top_srcdir)/scripts/init.sh.in > $@.new && \
+	chmod +x $@.new && \
+	mv $@.new $@

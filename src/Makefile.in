@@ -1,0 +1,231 @@
+# $Id: Makefile.in 1674 2008-04-30 11:09:54Z ft $
+#
+
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+DESTDIR = @DESTDIR@
+SHELL = @SHELL@
+
+confdir = @sysconfdir@
+sslcertdir = @sslcertdir@
+mnesiadir = @mnesiadir@
+beamdir = @libdir@/yxa/ebin
+includedir = @libdir@/yxa/include
+sbindir = @sbindir@
+exec_prefix=${prefix}
+builddir = @builddir@
+local_module = @local_module@
+
+ERLC = @ERLC@
+ERL = @ERL@
+
+INSTALL = @INSTALL@
+install_DATA = @INSTALL_DATA@
+install_PROGRAM = @INSTALL_PROGRAM@
+
+ebin_dir = ../ebin
+doc_dir = ../doc
+
+mkinstalldirs = $(SHELL) $(top_srcdir)/scripts/mkinstalldirs
+
+systools_make_script = \
+	$(ERLC) +no_module_tests -pa $(ebin_dir) $(ebin_dir)/$*.rel
+
+
+erl_FILES = \
+	yxa_app.erl \
+	appserver.erl \
+	appserver_glue.erl \
+	appserver_test.erl \
+	autotest.erl \
+	autotest_util.erl \
+	bootstrap.erl \
+	contact.erl \
+	contact_param.erl \
+	dialog_server.erl \
+	directory.erl \
+	dnsutil.erl \
+	group_regexp.erl \
+	gruu.erl \
+	hex.erl \
+	incomingproxy.erl \
+	incomingproxy_test.erl \
+	key_val_db.erl \
+	keylist.erl \
+	local.erl \
+	logger.erl \
+	lookup.erl \
+	outgoingproxy.erl \
+	outgoingproxy_test.erl \
+	pstnproxy.erl \
+	pstnproxy_test.erl \
+	registrar.erl \
+	sipauth.erl \
+	sipdialog.erl \
+	sipdst.erl \
+	sipheader.erl \
+	siphost.erl \
+	siplocation.erl \
+	sippacket.erl \
+	sipparse_util.erl \
+	sippipe.erl \
+	sipproxy.erl \
+	siprequest.erl \
+	sipserver.erl \
+	sipserver_sup.erl \
+	siptimer.erl \
+	sipurl.erl \
+	siputil.erl \
+	sup_error_logger.erl \
+	targetlist.erl \
+	url_param.erl \
+	util.erl \
+	xref_test.erl \
+	yxa_ctl.erl \
+	yxa_edoc.erl \
+	yxa_monitor.erl \
+	$(local_module).erl
+
+
+imported_hrl_FILES = \
+	include/database_regexproute.hrl \
+	include/database_forward.hrl \
+	include/database_gruu.hrl \
+	include/directory.hrl \
+	include/phone.hrl \
+	include/pstnproxy.hrl \
+	include/sipproxy.hrl \
+	include/siprecords.hrl \
+	include/sipsocket.hrl \
+	include/yxa_config.hrl
+
+hrl_FILES = \
+
+yxa_hrl_FILES = $(imported_hrl_FILES) $(hrl_FILES)
+
+boot_FILES = \
+	incomingproxy.boot \
+	pstnproxy.boot \
+	appserver.boot \
+	outgoingproxy.boot
+
+app_FILES = $(addprefix $(ebin_dir)/, yxa.app $(boot_FILES:.boot=.app))
+
+rel_FILES = $(addprefix $(ebin_dir)/, start_ssl.rel $(boot_FILES:.boot=.rel))
+
+CC = gcc
+CFLAGS = -Wall
+
+beam_FILES = $(addprefix $(ebin_dir)/, $(erl_FILES:.erl=.beam))
+
+# the order of the subdirectorys is important to target 'packages'
+SUBDIRS = \
+	config \
+	cpl \
+	database \
+	eldap \
+	event_handler \
+	mysql \
+	include \
+	local \
+	sipuserdb \
+	transactionlayer \
+	transportlayer \
+	event 
+
+RECURSIVE_TARGETS = all-recursive install-recursive clean-recursive distclean-recursive doc-recursive packages-recursive
+
+all: $(beam_FILES) $(app_FILES) $(rel_FILES) all-recursive $(boot_FILES) start_ssl.boot
+
+$(RECURSIVE_TARGETS):
+	@target=`echo $@ | sed s/-recursive//`; \
+	list='$(SUBDIRS)'; for subdir in $$list; do \
+	echo "Making $$target in $$subdir"; \
+	(cd $$subdir && $(MAKE) $$target) || exit 1; \
+	done
+
+install: $(boot_FILES) $(beam_FILES) $(hrl_FILES) start_ssl.boot install-recursive
+	$(mkinstalldirs) $(DESTDIR)$(beamdir)
+	$(mkinstalldirs) $(DESTDIR)$(includedir)
+	for p in $(beam_FILES) $(app_FILES); do \
+	  $(install_DATA) $$p $(DESTDIR)$(beamdir)/$$f ; \
+	done
+	for p in $(boot_FILES) start_ssl.boot; do \
+	  $(install_DATA) $$p $(DESTDIR)$(beamdir)/$$f ; \
+	done
+	for p in $(hrl_FILES); do \
+	  $(install_DATA) $(srcdir)/$$p $(DESTDIR)$(includedir)/$$f ; \
+	done
+
+packages:	all $(boot_FILES) $(rel_FILES) sys.config
+	for p in $(basename $(rel_FILES)) ; do \
+	  $(ERL) -noinput -pa $(ebin_dir) \
+	    -run systools make_tar  $$p -s erlang halt ; \
+	  test -f $$p.tar.gz || exit 1 ; \
+	done
+	$(MAKE) packages-recursive
+
+distclean: clean distclean-recursive
+	rm -f Makefile
+
+clean: clean-recursive
+	rm -f core *.core *~
+	rm -f *.beam *.script *.start *.boot *.app
+	rm -f *.o ktrace.out erl_crash.dump
+	rm -f $(addsuffix .tar.gz, $(basename $(rel_FILES)))
+	rm -f $(rel_FILES) start_ssl.rel sys.config
+	rm -f $(app_FILES)
+	rm -f $(beam_FILES)
+
+$(beam_FILES): $(yxa_hrl_FILES)
+$(boot_FILES): $(beam_FILES)
+
+SUFFIXES = .c .o .hrl .beam .erl .boot .rel .rel-in .app .app-in
+.SUFFIXES:
+.SUFFIXES: .c .o .hrl .beam .erl .boot .rel .rel-in .app .app-in
+
+$(ebin_dir)/%.beam:	$(srcdir)/%.erl
+	$(ERLC) -o $(ebin_dir) -pa $(ebin_dir) -I$(srcdir)/include -W +debug_info $<
+
+$(ebin_dir)/local.beam: $(srcdir)/local.erl ../config.status
+	$(ERLC) -o $(ebin_dir) -pa $(ebin_dir) -I$(srcdir)/include -W +debug_info -DLOCAL_MODULE=$(local_module) $(srcdir)/local.erl
+
+$(ebin_dir)/directory.beam: $(srcdir)/directory.erl ../config.status $(srcdir)/eldap/eldap.hrl
+	$(ERLC) -o $(ebin_dir) -pa $(ebin_dir) -I$(srcdir)/include -I$(srcdir)/eldap -W +debug_info $(srcdir)/directory.erl
+
+$(ebin_dir)/%.app:	$(srcdir)/%.app-in
+	sed -e 's!%LOCAL_MODULE%!$(local_module)!' \
+			-e 's!%VERSION%!@PACKAGE_VERSION@!' < $< > $@
+
+$(ebin_dir)/%.rel:	$(srcdir)/%.rel-in
+	sed -e 's!%VERSION%!@PACKAGE_VERSION@!' < $< > $@
+
+%.boot: $(ebin_dir)/%.app $(ebin_dir)/yxa.app $(ebin_dir)/%.rel
+	$(systools_make_script)
+
+sys.config:	$(srcdir)/sys.config-in
+	sed -e 's!%DB_DIR%!$(mnesiadir)!' \
+	      -e 's!%CONF_DIR%!$(confdir)!' < $< > $@
+
+start_ssl.boot: $(ebin_dir)/start_ssl.rel
+	$(systools_make_script)
+
+test: $(ebin_dir)/autotest.beam
+	$(ERL) -noshell -s autotest run shell -pz $(ebin_dir)
+
+covertest: autotest.beam
+	$(ERL) -noshell -s autotest run_cover shell -pz $(ebin_dir)
+
+xreftest: $(beam_FILES)
+	$(ERL) -noshell -s xref_test run_shell -pz .. $(ebin_dir)
+
+doc: $(ebin_dir)/yxa_edoc.beam doc-recursive
+	mkdir -p $(doc_dir)/html/src
+	cp $(srcdir)/overview.edoc $(doc_dir)/html/src/
+	$(ERL) $(YXA_EDOC_ARGS) -pa $(ebin_dir) -noshell \
+		-yxa_edoc_dir $(doc_dir)/html/src \
+		-yxa_edoc_srcpath $(srcdir) \
+		-run yxa_edoc run "$(erl_FILES)" \
+		-run init stop

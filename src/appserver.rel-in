@@ -1,0 +1,11 @@
+%% Erlang OTP R12B-5 library versions
+{release, {"YXA appserver","YXA-appserver-%VERSION%"},
+ {erts, "5.5.2"},
+ [{kernel,"2.12.5"},
+  {stdlib,"1.15.5"},
+  {ssl, "3.10"},
+  {mnesia, "4.4.7"},
+  {yxa, "%VERSION%"},
+  {appserver, "%VERSION%"}
+ ]
+}.

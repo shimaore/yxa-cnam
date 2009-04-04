@@ -1,0 +1,109 @@
+--
+
+ - Enable proper OTP application packaging.
+
+
+-- 1.0		(2007-11-05)
+
+ - Require Erlang/OTP R11B-2, the latest official release with
+   working Erlang distribution over SSL.
+
+
+-- 1.0rc2	(2007-10-17)
+
+ - Start using edoc for documentation of all functions.
+ - Fix bug in handling of race condition with CANCEL, which could
+   result in phones that never stop ringing.
+ - Handle UTF-8 in contact display names.
+ - Bugfix a certain case of URI comparision in the CPL subsystem.
+
+
+-- 1.0rc1	(2007-04-12)
+
+ - Updated RFC3263 (SIP DNS) implementation to work just like
+   the RFC says.
+ - Made what log levels should be written to files configurable.
+ - Rewrote most of the pstnproxy YXA application to allow more
+   configurations than before (for example gateway to gateway
+   communication).
+ - Improved test framework greatly to the point where whole YXA
+   applications can be tested with a constructed configuration and
+   user database environment.
+ - Implemented GRUU (draft-ietf-sip-gruu-06).
+ - Implemented generic SIP Event (RFC3265) server, with plugins for
+   the following packages : presence, dialog (experimental)
+ - Implemented Outbound (draft-ietf-sip-outbound-03). Not very
+   tested since there are virtually no other implementations of
+   Outbound yet.
+ - Implement RFC3327 (Path). Needed for Outbound.
+ - Implement STUN server answering NAT keepalive STUN requests
+   received on our SIP ports.
+
+
+-- 0.91		(2006-03-21)
+
+ - Fix bug which made applications crash on config-reload when there
+   was an include file that contained syntax errors.
+
+
+-- 0.91pre1	(2006-03-07)
+
+ - Temporarily blacklist unreachable/unresponsive destinations.
+ - Implement RFC4320 which updates RFC3261 with regard to non-
+   INVITE transactions.
+ - Add basic SIP dialog support to the SIP stack.
+ - Add 'include' support to (erlang) configuration files.
+ - Rewrote local.erl framework so that only functions that are
+   actually to be overridden has to be in the domain specific
+   modules.
+ - Include Date: header in '200 Ok' response to REGISTER.
+ - Various bugfixes, including making sure we close the old log
+   files upon rotation.
+
+
+-- 0.90		(2005-10-21)
+
+ - Fix minor problems in two log messages.
+
+
+-- 0.90pre2	(2005-10-06)
+
+ - Don't terminate listener on SSL socket accept() errors, to avoid
+   denial of service.
+ - Implement SSL subjectAltName checking. We used to only check the
+   commonName.
+ - A couple of bug fixes.
+
+
+-- 0.90pre1	(2005-09-21)
+
+Changes since Snapshot 2005-09-01 :
+
+ - Allow hostnames from DNS SRV/NAPTR records in TLS certificates,
+   unless configured not to.
+ - Fix bugs found at SIPit 17
+   (IPv6, multiple authentication headers etc.).
+
+
+-- Baseline (from project homepage) :
+
+Main features :
+
+ - RFC3261 compliant (almost) SIP-server, capable of everything a
+   generic domain needs :
+
+  - Registrar that keeps track of your users
+  - Handles incoming SIP requests to your domain
+  - Handles routing of requests from your users to remote domains
+  - TCP, UDP and TLS (including SIPS) support
+  - Automatically maps e-mail addresses of your users to their SIP
+    addresses, if you have the e-mail addresses in LDAP
+  - Handles multiple domains using a single server instance
+  - ENUM support for PSTN-bypass whenever possible
+  - IPv6 support
+  - Forking, both parallel and sequential
+  - CPL (RFC3880) support for advanced user-control of events
+    (currently incoming calls only)
+  - Modular user database, currently with LDAP, Mnesia, MySQL and
+    text-file backends
+  - PSTN destination access control (per user or for anonymous users)
